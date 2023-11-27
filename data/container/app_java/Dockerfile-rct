@@ -1,0 +1,7 @@
+FROM openjdk:11.0.16-jre
+MAINTAINER Buon SUI <boonsuli@gmail.com>
+VOLUME /app
+RUN mkdir -p /app/
+WORKDIR /app
+COPY ./target/trailerplan-idserver-1.0.0-SNAPSHOT.jar /app/trailerplan-idserver.jar
+CMD ["/usr/local/openjdk-11/bin/java", "-Dspring.profiles.active=rct", "-jar", "/app/trailerplan-idserver.jar"]

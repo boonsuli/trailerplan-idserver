@@ -1,0 +1,72 @@
+version: '3'
+
+volumes:
+  postgres-data:
+  pgadmin-data:
+  app_java-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./data/docker/app/
+      o: bind
+
+networks:
+  postgres-network:
+    driver: bridge
+
+services:
+  postgres:
+    restart: always
+    image: postgres:12.5-alpine
+    hostname: postgres-server
+    container_name: postgres-container
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: ${POSTGRES_DATA}
+      POSTGRES_INITDB_ARGS: '--locale=fr_FR:UTF8'
+    volumes:
+      - postgres-data:${POSTGRES_DATA}
+      - ${INIT_DB_LOCAL_DIR}/${INIT_DB_SCHEMA}:${INIT_DB_DOCKER_DIR}/${INIT_DB_SCHEMA}
+      - ${INIT_DB_LOCAL_DIR}/${INIT_DB_DATA}:${INIT_DB_DOCKER_DIR}/${INIT_DB_DATA}
+    networks:
+      - postgres-network
+    ports:
+      - "5432:5432"
+
+  pgadmin:
+    restart: always
+    image: dpage/pgadmin4:4.30
+    hostname: pgadmin-server
+    container_name: pgadmin-container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_LISTEN_PORT: ${PGADMIN_LISTEN_PORT}
+    volumes:
+      - pgadmin-data:${PGADMIN_DATA}
+    networks:
+      - postgres-network
+    ports:
+      - "8888:80"
+    links:
+      - "postgres:postgres-server"
+
+  app_java:
+    restart:  always
+    image: ${APP_PROJECT}/${APP_SUB_PROJECT}:${APP_VERSION}
+    hostname: ${APP_HOSTNAME}
+    container_name: ${APP_CONTAINER_NAME}
+    build:
+      context: .
+      dockerfile: data/container/app_java/${DOCKER_FILE}
+    env_file:
+      - ./data/container/config/${ENV_FILE}
+    volumes:
+      - app_java-data:/app/
+    ports:
+      - "8080:8080"
+    command: /usr/local/openjdk-11/bin/java -jar /app/trailerplan-idserver.jar com.trailerplan.idserver.TrailerplanIdserverApplication
+    networks:
+      - postgres-network
